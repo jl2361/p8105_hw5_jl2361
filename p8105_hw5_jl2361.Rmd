@@ -47,7 +47,9 @@ homicide_df =
   read.csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>%
   janitor::clean_names() %>%
   mutate(
-    city_state = str_c(city, state, sep = ", "))
+    state = toupper(state),
+    city_state = str_c(city, state, sep = ", ") %>% 
+    str_replace("Tulsa, AL", "Tulsa, OK"))
 
 number_homicide_df = 
   homicide_df %>%
@@ -60,22 +62,65 @@ number_unsolved_homicide_df =
   group_by(city_state) %>%
   summarize(number_unsolved_homicide = n()) 
 
-homicide_table = 
-  left_join(number_homicide_df, number_unsolved_homicide_df, by = "city_state") %>%
-  replace_na(list(number_unsolved_homicide = 0)) %>%
-  knitr::kable()
+homicide = 
+  left_join(number_unsolved_homicide_df, number_homicide_df, by = "city_state") 
 
-homicide_table
+homicide %>%
+  knitr::kable()
 ```
 
 For the city of Baltimore, MD, use the prop.test function to estimate the proportion of homicides that are unsolved; save the output of prop.test as an R object, apply the broom::tidy to this object and pull the estimated proportion and confidence intervals from the resulting tidy dataframe.
 
 ```{r}
+myproptest = function(x) {
+  
+    estimate = 
+      prop.test(x[[2]], x[[3]]) %>% 
+      broom::tidy() %>%
+      select(estimate)
+    conf_low = 
+      prop.test(x[[2]], x[[3]]) %>% 
+      broom::tidy() %>%
+      select(conf.low)
+    conf_high = 
+      prop.test(x[[2]], x[[3]]) %>% 
+      broom::tidy() %>%
+      select(conf.high)
 
+tibble(
+  estimate, 
+  conf_low,
+  conf_high
+)
+
+  }
+
+baltimore = 
+  homicide %>% 
+    filter(city_state %in% c("Baltimore, MD")) %>% 
+  as.list() %>%
+  myproptest()
+
+baltimore
 ```
 
-
 Now run prop.test for each of the cities in your dataset, and extract both the proportion of unsolved homicides and the confidence interval for each. Do this within a “tidy” pipeline, making use of purrr::map, purrr::map2, list columns and unnest as necessary to create a tidy dataframe with estimated proportions and CIs for each city.
+
+```{r}
+homicide_prop = 
+  homicide %>%
+   mutate(
+    prop_data = map2(number_unsolved_homicide, number_homicide, ~ prop.test(.x, .y) %>%
+      broom::tidy())) %>%
+  unnest(prop_data) %>%
+  select(city_state, estimate, conf.low, conf.high) %>%
+  rename(
+    conf_low = conf.low,
+    conf_high = conf.high
+  )
+
+homicide_prop
+```
 
 Create a plot that shows the estimates and CIs for each city – check out geom_errorbar for a way to add error bars based on the upper and lower limits. Organize cities according to the proportion of unsolved homicides.
 
