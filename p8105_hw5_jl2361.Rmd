@@ -38,10 +38,9 @@ Tidy the result; manipulate file names to include control arm and subject ID, ma
 Make a spaghetti plot showing observations on each subject over time, and comment on differences between groups.
 
 # Problem 2
-The Washington Post has gathered data on homicides in 50 large U.S. cities and made the data available through a GitHub repository here. You can read their accompanying article here.
 
-Describe the raw data. Create a city_state variable (e.g. “Baltimore, MD”) and then summarize within cities to obtain the total number of homicides and the number of unsolved homicides (those for which the disposition is “Closed without arrest” or “Open/No arrest”).
-
+## Data load & tidying
+First, we load the homicide data and do some data tidying. 
 ```{r}
 homicide_df = 
   read.csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>%
@@ -50,7 +49,12 @@ homicide_df =
     state = toupper(state),
     city_state = str_c(city, state, sep = ", ") %>% 
     str_replace("Tulsa, AL", "Tulsa, OK"))
+```
 
+The raw data reports data on homicides in 50 U.S. cities describing the date, location, victim details, and case disposition. There are `r nrow(homicide_df)` rows/observations and `r ncol(homicide_df)` columns/variables after we create the `city_state` variable. We note that some state abbreviations were not completely capitalized and that there appears to be a typo for the city of Tulsa, so we fix these data entry errors. 
+
+Next, we create a dataframe summarizing the number of total homicides by city and state, in addition to the number of unsolved homicides categroized by "Closed without arrest" or "Open/No arrest."
+```{r}
 number_homicide_df = 
   homicide_df %>%
   group_by(city_state) %>%
@@ -69,8 +73,8 @@ homicide %>%
   knitr::kable()
 ```
 
-For the city of Baltimore, MD, use the prop.test function to estimate the proportion of homicides that are unsolved; save the output of prop.test as an R object, apply the broom::tidy to this object and pull the estimated proportion and confidence intervals from the resulting tidy dataframe.
-
+## Using prop.test
+We then create a `myproptest` function to apply the prop.test function to estimate the proportio of homicides that are unsolved, apply the broom::tidy, and save the output (estimated proportion and upper and lower bounds of the 95% confidence interval) as a tibble. We use `myproptest` for the city of Baltimore, MD and note that the filtered dataframe needs to be converted to a list of vectors prior to applying `myproptest`.
 ```{r}
 myproptest = function(x) {
   
@@ -104,8 +108,7 @@ baltimore =
 baltimore
 ```
 
-Now run prop.test for each of the cities in your dataset, and extract both the proportion of unsolved homicides and the confidence interval for each. Do this within a “tidy” pipeline, making use of purrr::map, purrr::map2, list columns and unnest as necessary to create a tidy dataframe with estimated proportions and CIs for each city.
-
+Now, we run `prop.test` for each of the cities in the dataset and extract both the proportion of unsolved homicides and the confidence interval for each within a “tidy” pipeline, making use of purrr::map2, list columns, and unnest.
 ```{r}
 homicide_prop = 
   homicide %>%
@@ -122,7 +125,19 @@ homicide_prop =
 homicide_prop
 ```
 
-Create a plot that shows the estimates and CIs for each city – check out geom_errorbar for a way to add error bars based on the upper and lower limits. Organize cities according to the proportion of unsolved homicides.
+## Plot
+Finally, we create a plot that shows the estimates and CIs for each city, and organize cities according to the proportion of unsolved homicides. We see that Chicago, IL, New Orleans, LA, and Baltimore, MD are the top 3 cities with the highest proportions of unsolved homicides. 
+```{r}
+homicide_prop %>%
+  mutate(
+    city_state = fct_reorder(city_state, estimate, .desc = TRUE)) %>%
+  ggplot(
+    aes(x = city_state, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf_low, ymax = conf_high)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+```
 
 # Problem 3
 When designing an experiment or analysis, a common question is whether it is likely that a true effect will be detected – put differently, whether a false null hypothesis will be rejected. The probability that a false null hypothesis is rejected is referred to as power, and it depends on several factors, including: the sample size; the effect size; and the error variance. In this problem, you will conduct a simulation to explore power in a one-sample t-test.
