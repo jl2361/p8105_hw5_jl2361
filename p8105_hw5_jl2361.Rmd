@@ -202,7 +202,7 @@ We repeat the above including μ={1,2,3,4,5,6}.
 ```{r}
 sim_df2 = 
   expand_grid(
-    mean = c(0, 1, 2, 3, 4, 5, 6),
+    mean = c(0:6),
     iter = 1:5000) %>% 
   mutate(
     ttest_df = map(.x = mean, ~ sim_ttest(mean = .x))) %>% 
@@ -215,8 +215,7 @@ sim_df2
 ```
 
 ## Plots
-Here is a plot showing the proportion of times the null was rejected (the power of the test), assuming a 5% level of significance, on the y axis and the true value of μ on the x axis. As the effect size gets bigger, we see that power increases as well (and appears to max/plateau around a mean of 5). 
-
+Here is a plot showing the proportion of times the null was rejected (the power of the test), assuming a 5% level of significance, on the y axis and the true value of μ on the x axis. As the effect size gets bigger, we see that power increases as well. 
 ```{r}
 sim_df2 %>% 
   mutate(
@@ -234,13 +233,16 @@ sim_df2 %>%
 
 Next, here is a plot showing the average estimate of μ̂  on the y axis and the true value of μ on the x axis. There is also a second plot (right) showing the average estimate of μ̂  only in samples for which the null was rejected, assuming a 5% level of significance, on the y axis and the true value of μ on the x axis. 
 
-The sample average of μ̂ across tests for which the null is rejected is approximately equal to the true value of μ (and the error variance is lower) **as the effect size increases**. 
+The sample average of μ̂ across tests for which the null is rejected is not approximately equal to the true value of μ, **especially as the effect size is smaller and power is lower**.
 ```{r}
 mean_plot1 =
   sim_df2 %>% 
+  group_by(mean) %>%
+  summarize(
+    avg_muhat = mean(mu_hat)) %>%
   ggplot(
-    aes(x = mean, y = mu_hat)) +
-  geom_point(alpha = 0.5) +
+    aes(x = mean, y = avg_muhat)) +
+  geom_point() + geom_line() +
   labs(title = "All samples")
 
 mean_plot2 =
@@ -248,9 +250,12 @@ mean_plot2 =
     mutate(
     reject = if_else(p_value < 0.05, "y", "n")) %>%
   filter(reject == "y") %>%
+  group_by(mean) %>%
+  summarize(
+    avg_muhat = mean(mu_hat)) %>%
   ggplot(
-    aes(x = mean, y = mu_hat)) +
-  geom_point(alpha = 0.5) +
+    aes(x = mean, y = avg_muhat)) +
+  geom_point() + geom_line() +
   labs(title = "Samples for null rejected")
 
 mean_plot1 + mean_plot2
