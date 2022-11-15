@@ -243,7 +243,7 @@ mean_plot1 =
   ggplot(
     aes(x = mean, y = avg_muhat)) +
   geom_point() + geom_line() +
-  labs(title = "All samples")
+  labs(title = "Average mu hat for all samples")
 
 mean_plot2 =
   sim_df2 %>% 
@@ -256,7 +256,29 @@ mean_plot2 =
   ggplot(
     aes(x = mean, y = avg_muhat)) +
   geom_point() + geom_line() +
-  labs(title = "Samples for null rejected")
+  labs(title = "Samples for null rejected only")
 
 mean_plot1 + mean_plot2
+```
+
+Here are plots that depict similar information as above but with all μ̂ represented, not just the average estimate of μ̂.
+```{r}
+mean_plot3 =
+  sim_df2 %>% 
+  ggplot(
+    aes(x = mean, y = mu_hat)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Mu hat for all samples")
+
+mean_plot4 =
+  sim_df2 %>% 
+    mutate(
+    reject = if_else(p_value < 0.05, "y", "n")) %>%
+  filter(reject == "y") %>%
+  ggplot(
+    aes(x = mean, y = mu_hat)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Samples for null rejected only")
+
+mean_plot3 + mean_plot4
 ```
