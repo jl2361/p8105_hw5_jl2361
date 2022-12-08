@@ -4,6 +4,7 @@ author: "Jennifer Lee (UNI: jl2361)"
 date: '`r format(Sys.time(), "%Y-%m-%d")`'
 output: github_document
 ---
+testing git connection
 
 ```{r setup, include = FALSE}
 library(tidyverse)
